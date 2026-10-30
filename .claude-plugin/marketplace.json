@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "english-worksheet",
+  "version": "0.1.0",
+  "description": "Personalized ESL/EFL homework worksheets for one learner.",
+  "owner": {
+    "name": "Zachary Rosen"
+  },
+  "plugins": [
+    {
+      "name": "english-worksheet",
+      "description": "Builds a student profile from existing data or an interview, then writes worksheets and an answer key as .docx files.",
+      "source": "./",
+      "category": "education"
+    }
+  ]
+}
