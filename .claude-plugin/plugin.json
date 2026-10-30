@@ -1,7 +1,7 @@
 {
   "name": "english-worksheet",
   "description": "Personalized ESL/EFL homework worksheets for one learner: build a student profile from existing data or an interview, choose how many worksheets, and export one combined .docx or one per worksheet, with an answer key.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": { "name": "Zachary Rosen" },
   "homepage": "https://github.com/ratherlegit/english-worksheet",
   "repository": "https://github.com/ratherlegit/english-worksheet",

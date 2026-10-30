@@ -53,7 +53,13 @@ Rules for the plan:
 
 ## Step 3: Write the worksheets
 
-Write the whole pack as one markdown file following `references/exercise-types.md` (worksheet anatomy, exercise catalog, answer key format). Apply these rules to every student-facing line:
+Write the whole pack as one markdown file following `references/exercise-types.md` (worksheet anatomy, exercise catalog, answer key format). Apply these rules to every worksheet:
+
+- **Open with a focus box** (Grammar Focus on grammar worksheets, Language Focus on vocabulary and phrase worksheets). It explains the point the whole worksheet is built on: the rule in one plain sentence, a provided table or pattern, 5 to 8 examples that show the point used in different ways (statements, questions, negatives, different subjects, different work situations), a short text or dialogue showing it in real use, and 2 or 3 common mistakes with the fix. Make it clear enough that the student could do the worksheet from the box alone.
+- **Provide the forms, never ask the student to produce them in a list.** Do not ask the student to write out every form of a verb or fill in a table of forms. Put the table in the focus box, then make the student use it in different ways across the activities: choose the right form in a message, repair a short text, answer questions about their own work, build a sentence from a prompt, write a short paragraph.
+- **Design for typing.** Students work on a computer in the same Word or Google Docs file. They will not circle, underline, cross out, tick, or draw. Give each item a "Your answer" cell to type in (a table whose last column is headed `Your answer`) and use a `:::write` box for writing tasks. Ask the student to type a word, a letter, or a sentence. Never write "circle," "underline," or "draw a line."
+
+Apply these rules to every student-facing line:
 
 - Address the student in the second person. Write in simple English matched to the CEFR level, and simpler than the exercise content. Short instructions beat clever ones.
 - **Never mention the tutor, teacher, instructor, or "the student".** For recordings, write "bring it to your next lesson", not "send it to your tutor".
@@ -63,7 +69,7 @@ Write the whole pack as one markdown file following `references/exercise-types.m
 - Never reuse a vocabulary word the profile lists as taught, unless the worksheet is reviewing it.
 - No em dashes anywhere. No small label lines above headings.
 
-Before building, scan the student-facing text for the words *tutor*, *teacher*, *instructor*, and *student* (case-insensitive) and rewrite every hit. Do this every time.
+Before building, scan the student-facing text for the words *tutor*, *teacher*, *instructor*, and *student* (case-insensitive), and for *circle*, *underline*, *cross out*, *tick*, and *draw*, and rewrite every hit. Do this every time.
 
 ## Step 4: Build the files
 
@@ -73,7 +79,7 @@ Ask where to save if the tutor has not said; default to `~/Downloads/<student-sl
 - **One file per worksheet**: `python3 scripts/md_to_docx.py pack.md out/ --split`
 - The answer key is a separate markdown file exported the same way, never merged into the student's file.
 
-If there is no shell access, say so plainly and give clean markdown to paste instead. If rendering is available (LibreOffice), look at the pages. If it is not, tell the tutor the layout was not visually checked.
+If there is no shell access, say so plainly and give clean markdown to paste instead. If rendering is available (LibreOffice), look at the pages. On macOS without it, `qlmanage -t -s 1400 -o <dir> file.docx` makes a first-page preview, but it ignores table widths and page breaks, so it only confirms fonts, borders, and shading. If nothing can render the file, tell the tutor the layout was not visually checked.
 
 ## Step 5: Update the record
 

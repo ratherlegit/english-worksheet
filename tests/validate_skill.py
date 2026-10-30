@@ -27,16 +27,26 @@ Overview text.
 ## Worksheet 1: Do I need be?
 
 :::box
-**Remember**
+**Grammar Focus: be**
 - I am busy.
 - She works.
+
+| Subject | be |
+|---|---|
+| I | am |
+| he | is |
 :::
 
 ### Part A: Fix it
-*Fix each sentence.*
+*Type the correct sentence in the blue box.*
 
-1. I working now.
-2. She very busy.
+| # | Sentence | Your answer |
+|---|---|---|
+| 1 | I working now. |  |
+| 2 | She very busy. |  |
+
+:::write 4
+:::
 
 <!-- worksheet -->
 ## Worksheet 2: Past tense
@@ -116,8 +126,11 @@ class ExporterTests(unittest.TestCase):
             result = self.run_script(str(src), str(out))
             self.assertEqual(result.returncode, 0, result.stderr)
             xml = zipfile.ZipFile(out).read("word/document.xml").decode()
-            self.assertEqual(xml.count('w:type="page"'), 2)  # one break before each worksheet
+            self.assertEqual(xml.count('w:pageBreakBefore'), 2)  # one break before each worksheet
             self.assertIn("F2F2F2", xml)  # the box is shaded
+            self.assertIn("EAF1FB", xml)  # answer cells and write boxes are light blue
+            self.assertIn("w:trHeight", xml)  # answer rows have a minimum height
+            self.assertGreaterEqual(xml.count("<w:tbl>"), 5)  # overview, box, nested table, answers, write box
 
     def test_split(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -130,7 +143,7 @@ class ExporterTests(unittest.TestCase):
             self.assertEqual(names, ["00-overview.docx", "01-worksheet-1-do-i-need-be.docx", "02-worksheet-2-past-tense.docx"])
             for p in out.glob("*.docx"):
                 xml = zipfile.ZipFile(p).read("word/document.xml").decode()
-                self.assertNotIn('w:type="page"', xml)  # no stray break in a one-worksheet file
+                self.assertNotIn('w:pageBreakBefore', xml)  # no stray break in a one-worksheet file
 
     def test_usage_error(self):
         self.assertNotEqual(self.run_script().returncode, 0)

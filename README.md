@@ -6,7 +6,7 @@
 
 1. **Builds a student profile** from data you already have (an english-tutoring record, lesson transcripts, a written analysis, old handouts, notes) or from a short interview. Recurring errors are quoted with their evidence so you can check them.
 2. **Asks how many worksheets you want**, then proposes a plan (title, focus, exercise types, minutes) for you to approve.
-3. **Writes the worksheets** in simple English, using the student's own work and interests, with a Remember box, graded exercises, and speaking tasks.
+3. **Writes the worksheets** in simple English, using the student's own work and interests. Each one starts with a short, clear grammar or language focus, then activities the student types into the same file.
 4. **Exports `.docx`**: one combined file, or one file per worksheet, plus a separate answer key with notes for you.
 5. **Remembers the student**, so the next pack builds on the last.
 
@@ -37,7 +37,10 @@ Profiles and worksheet logs are saved to `~/eng-teaching-records/worksheets/<stu
 
 ## Versions
 
-Pre-1.0 while it is tested on real students. See git tags. `0.1.0` is the first release.
+Pre-1.0 while it is tested on real students. See git tags.
+
+- `0.2.0`: every worksheet opens with a Grammar Focus or Language Focus box (clear rule, provided table, varied examples, a short text in real use, common mistakes). Worksheets are designed for typing in Word or Google Docs: blue answer cells next to each item and blue write boxes. No "write all the forms" tasks and no circling or underlining.
+- `0.1.0`: first release.
 
 ## Tests
 

@@ -17,7 +17,12 @@ use the pack). In --split mode it is written as 00-overview.docx if it has conte
 Supports everything md_to_docx.py in english-tutoring supports (# / ## / ### headings,
 **bold**, *italic*, bullets, numbered lists that restart at 1, markdown tables,
 > notes, links flattened to plain text), plus:
-    :::box ... :::     a light gray one-cell box (for "Remember" tips and word banks)
+    :::box ... :::     a light gray one-cell box (grammar focus, word banks)
+    :::write N ... :::  an empty light blue answer box about N lines tall; the student
+                        clicks inside and types, and the box grows as they type
+    A table whose last column is headed "Your answer" gets light blue answer cells with
+    a minimum height, so the student types the answer next to the item without
+    touching the layout. Column widths are set automatically.
 
 Output is black text only, like the other english-teaching exports.
 
@@ -163,6 +168,49 @@ def apply_numbering(paragraph, num_id):
     p_pr.append(num_pr)
 
 
+TBLPR_ORDER = [
+    "tblStyle", "tblpPr", "tblOverlap", "bidiVisual", "tblStyleRowBandSize", "tblStyleColBandSize",
+    "tblW", "jc", "tblCellSpacing", "tblInd", "tblBorders", "shd", "tblLayout", "tblCellMar",
+    "tblLook", "tblCaption", "tblDescription",
+]
+
+
+def order_tbl_pr(tbl_pr):
+    """Re-sort tblPr children into schema order. Strict viewers ignore or reject
+    properties that appear out of order."""
+    def key(el):
+        name = el.tag.split("}")[1]
+        return TBLPR_ORDER.index(name) if name in TBLPR_ORDER else len(TBLPR_ORDER)
+    children = sorted(list(tbl_pr), key=key)
+    for el in list(tbl_pr):
+        tbl_pr.remove(el)
+    for el in children:
+        tbl_pr.append(el)
+
+
+def set_table_borders(table, color="A6A6A6"):
+    """Write explicit single-line borders on the table so every viewer (Word, Google Docs,
+    previewers) draws the grid, instead of relying on the Table Grid style."""
+    tbl_pr = table._tbl.tblPr
+    for old in tbl_pr.findall(qn("w:tblBorders")):
+        tbl_pr.remove(old)
+    borders = OxmlElement("w:tblBorders")
+    for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        el = OxmlElement(f"w:{edge}")
+        el.set(qn("w:val"), "single")
+        el.set(qn("w:sz"), "4")
+        el.set(qn("w:space"), "0")
+        el.set(qn("w:color"), color)
+        borders.append(el)
+    tbl_pr.append(borders)
+    order_tbl_pr(tbl_pr)
+
+
+def style_table(table):
+    table.style = "Table Grid"
+    set_table_borders(table)
+
+
 def shade_cell(cell, fill="F2F2F2"):
     """Fill a table cell with a light gray background (text stays black)."""
     tc_pr = cell._tc.get_or_add_tcPr()
@@ -174,25 +222,117 @@ def shade_cell(cell, fill="F2F2F2"):
 
 
 def add_box(doc, box_lines):
-    """Render the lines of a :::box block as a shaded one-cell table."""
+    """Render the lines of a :::box block as a shaded one-cell table.
+    Markdown tables inside the block become real nested tables."""
     table = doc.add_table(rows=1, cols=1)
-    table.style = "Table Grid"
+    style_table(table)
     cell = table.rows[0].cells[0]
     shade_cell(cell)
+    set_column_widths(table, [6.5])
     first = True
-    for raw in box_lines:
-        text = raw.strip()
+    k = 0
+    while k < len(box_lines):
+        text = box_lines[k].strip()
         if not text:
+            k += 1
+            continue
+        if text.startswith("|"):
+            rows = []
+            while k < len(box_lines) and box_lines[k].strip().startswith("|"):
+                row_text = box_lines[k].strip()
+                if not TABLE_SEPARATOR_PATTERN.match(row_text):
+                    rows.append(parse_table_row(row_text))
+                k += 1
+            nested = cell.add_table(rows=len(rows), cols=len(rows[0]))
+            style_table(nested)
+            set_column_widths(nested, proportional_widths(rows, 6.1))
+            for r_idx, row_cells in enumerate(rows):
+                for c_idx, cell_text in enumerate(row_cells):
+                    target = nested.rows[r_idx].cells[c_idx].paragraphs[0]
+                    add_inline_runs(target, cell_text)
+                    if r_idx == 0:
+                        for run in target.runs:
+                            run.bold = True
+            cell.add_paragraph()
+            first = False
             continue
         p = cell.paragraphs[0] if first else cell.add_paragraph()
         first = False
         if text.startswith("- ") or text.startswith("* "):
             text = "\u2022 " + text[2:].strip()
         add_inline_runs(p, text)
+        k += 1
+    doc.add_paragraph()
+
+
+ANSWER_FILL = "EAF1FB"
+ANSWER_HEADERS = {"your answer", "answer"}
+
+
+def set_row_min_height(row, inches):
+    """Make a table row at least `inches` tall (it still grows when text is typed)."""
+    tr_pr = row._tr.get_or_add_trPr()
+    height = OxmlElement("w:trHeight")
+    height.set(qn("w:val"), str(int(inches * 1440)))
+    height.set(qn("w:hRule"), "atLeast")
+    tr_pr.append(height)
+    cant_split = OxmlElement("w:cantSplit")
+    tr_pr.append(cant_split)
+
+
+def set_column_widths(table, widths_in_inches):
+    """Fix the table width and column widths in the XML so Word, Google Docs and
+    previewers all draw the same layout."""
+    table.autofit = False
+    tbl = table._tbl
+    tbl_pr = tbl.tblPr
+    for tag in ("w:tblW", "w:tblLayout"):
+        for old in tbl_pr.findall(qn(tag)):
+            tbl_pr.remove(old)
+    tbl_w = OxmlElement("w:tblW")
+    tbl_w.set(qn("w:w"), str(int(sum(widths_in_inches) * 1440)))
+    tbl_w.set(qn("w:type"), "dxa")
+    tbl_pr.append(tbl_w)
+    layout = OxmlElement("w:tblLayout")
+    layout.set(qn("w:type"), "fixed")
+    tbl_pr.append(layout)
+    order_tbl_pr(tbl_pr)
+    grid = tbl.tblGrid
+    for col, width in zip(grid.findall(qn("w:gridCol")), widths_in_inches):
+        col.set(qn("w:w"), str(int(width * 1440)))
+    for row in table.rows:
+        for cell, width in zip(row.cells, widths_in_inches):
+            cell.width = Inches(width)
+
+
+def proportional_widths(rows, total_inches):
+    """Column widths in proportion to the longest text in each column (min 0.7 inch)."""
+    cols = len(rows[0])
+    weights = [max(len(re.sub(r"[*_]", "", r[c])) if c < len(r) else 0 for r in rows) for c in range(cols)]
+    weights = [min(max(w, 6), 40) for w in weights]
+    scale = total_inches / sum(weights)
+    widths = [max(0.7, w * scale) for w in weights]
+    scale = total_inches / sum(widths)
+    return [w * scale for w in widths]
+
+
+def is_answer_header(text):
+    return re.sub(r"[*_]", "", text).strip().lower() in ANSWER_HEADERS
+
+
+def add_write_box(doc, lines_tall):
+    """An empty shaded one-cell table the student types into."""
+    table = doc.add_table(rows=1, cols=1)
+    style_table(table)
+    cell = table.rows[0].cells[0]
+    shade_cell(cell, ANSWER_FILL)
+    set_column_widths(table, [6.5])
+    set_row_min_height(table.rows[0], max(0.5, lines_tall * 0.27))
     doc.add_paragraph()
 
 
 def add_page_break(doc):
+    """Kept for callers that want an explicit break paragraph."""
     doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
 
 
@@ -253,9 +393,21 @@ def verify_black(output_path):
 
 def convert_lines(lines, output_path):
     doc = Document()
+    for section in doc.sections:
+        section.left_margin = section.right_margin = Inches(1)
+    zoom = doc.settings.element.find(qn("w:zoom"))
+    if zoom is not None and zoom.get(qn("w:percent")) is None:
+        zoom.set(qn("w:percent"), "100")  # the python-docx template omits this required attribute
     force_black_text(doc)
+    for name in ("Normal", "Title", "Heading 1", "Heading 2", "Heading 3", "List Bullet", "List Number"):
+        try:
+            doc.styles[name].font.name = "Arial"
+        except KeyError:
+            pass
+    doc.styles["Normal"].font.size = Pt(11)
     current_list_num_id = None  # tracks the active numbered list, so a new list restarts at 1
     wrote_content = False
+    page_break_next = False
 
     i = 0
     n = len(lines)
@@ -278,14 +430,27 @@ def convert_lines(lines, output_path):
             i += 1
             continue
 
+        if stripped.startswith(":::write"):
+            match = re.match(r":::write\s*(\d+)?", stripped)
+            lines_tall = int(match.group(1)) if match and match.group(1) else 4
+            i += 1
+            while i < n and lines[i].strip() != ":::":
+                i += 1  # any text inside is ignored; the box is left empty for typing
+            add_write_box(doc, lines_tall)
+            current_list_num_id = None
+            i += 1
+            continue
+
         if stripped in (WORKSHEET_MARKER, PAGEBREAK_MARKER):
             if wrote_content or stripped == PAGEBREAK_MARKER:
-                add_page_break(doc)
+                page_break_next = True  # applied to the next paragraph, no empty paragraph or glyph
             current_list_num_id = None
             i += 1
             continue
 
         wrote_content = True
+        if page_break_next:
+            doc._pending_break_marker = len(doc.element.body) - 1  # new content goes before the trailing sectPr
         is_numbered_item = bool(re.match(r"^\d+\.\s", stripped))
         if not is_numbered_item:
             current_list_num_id = None  # any non-numbered-item line ends the current list
@@ -305,7 +470,7 @@ def convert_lines(lines, output_path):
                 i += 1
 
             table = doc.add_table(rows=1, cols=len(header_cells))
-            table.style = "Table Grid"
+            style_table(table)
             for cell, text in zip(table.rows[0].cells, header_cells):
                 add_inline_runs(cell.paragraphs[0], text)
                 for run in cell.paragraphs[0].runs:
@@ -316,6 +481,14 @@ def convert_lines(lines, output_path):
                 for cell, text in zip(row.cells, row_cells):
                     add_inline_runs(cell.paragraphs[0], text)
 
+            if is_answer_header(header_cells[-1]):
+                for row in table.rows[1:]:
+                    shade_cell(row.cells[-1], ANSWER_FILL)
+                    set_row_min_height(row, 0.4)
+                cols = len(header_cells)
+                set_column_widths(table, {2: [3.6, 2.9], 3: [0.4, 3.4, 2.7]}.get(cols, [6.5 / cols] * cols))
+            else:
+                set_column_widths(table, proportional_widths([header_cells] + rows, 6.5))
             doc.add_paragraph()
             continue
 
@@ -343,6 +516,25 @@ def convert_lines(lines, output_path):
         else:
             p = doc.add_paragraph()
             add_inline_runs(p, stripped)
+
+        if page_break_next:
+            body = doc.element.body
+            marker_at = getattr(doc, "_pending_break_marker", None)
+            first_new = None
+            if marker_at is not None:
+                for child in list(body)[marker_at:]:
+                    if child.tag == qn("w:p"):
+                        first_new = child
+                        break
+                    if child.tag == qn("w:tbl"):
+                        first_new = child
+                        break
+            if first_new is not None and first_new.tag == qn("w:p"):
+                p_pr = first_new.get_or_add_pPr()
+                p_pr.append(OxmlElement("w:pageBreakBefore"))
+                page_break_next = False
+            elif first_new is not None:
+                page_break_next = False  # break before a table is not possible; keep going
 
         i += 1
 
