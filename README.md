@@ -1,5 +1,7 @@
 # english-worksheet
 
+> **Archived. This skill moved into [english-teaching](https://github.com/ratherlegit/english-teaching) (v2.1.0 and later), where all updates happen.** This repo is kept as a read-only record of its first two releases (0.1.0 and 0.2.0).
+
 **Personalized homework worksheets for one English learner, as Word files.** It builds a picture of the student first, then writes exactly as many worksheets as you ask for, aimed at what that student actually gets wrong.
 
 ## What it does
@@ -14,22 +16,14 @@ Black text only, no em dashes, and nothing in the student's pages mentions a tut
 
 ## Install
 
-### Claude Code
+Install it with the rest of the suite:
 
 ```
-claude plugin marketplace add ratherlegit/english-worksheet
-claude plugin install english-worksheet@english-worksheet
+claude plugin marketplace add ratherlegit/english-teaching
+claude plugin install english-teaching@english-teaching
 ```
 
-Then ask in plain English, for example *"Make 5 worksheets for my student Maria from this lesson analysis."* Or invoke it with `/english-worksheet:english-worksheet`.
-
-### Claude.ai or the Claude Desktop app
-
-Add the marketplace `ratherlegit/english-worksheet` under Settings, then Plugins, then install `english-worksheet`.
-
-### Other agents (Codex, Cursor, Aider, Windsurf, Gemini CLI)
-
-These read `AGENTS.md` automatically. Clone the repo, open it, and ask for worksheets. For `.docx` export, run `pip install python-docx`.
+Then ask in plain English, for example *"Make 5 worksheets for my student Maria from this lesson analysis."* Or invoke it with `/english-teaching:english-worksheet`.
 
 ## Records
 
